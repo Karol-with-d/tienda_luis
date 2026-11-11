@@ -1,0 +1,26 @@
+[
+  {
+    "id": 1,
+    "nombre": "Aceite Vegetal 800ml",
+    "categoria": "Abarrotes",
+    "precio": 2.25,
+    "stock": 30,
+    "fechaActualizacion": "2026-11-10T20:00:00.000Z"
+  },
+  {
+    "id": 2,
+    "nombre": "Arroz Blanco 1lb",
+    "categoria": "Granos Básicos",
+    "precio": 0.60,
+    "stock": 50,
+    "fechaActualizacion": "2026-11-10T20:00:00.000Z"
+  },
+  {
+    "id": 3,
+    "nombre": "Frijoles Rojos 1lb",
+    "categoria": "Granos Básicos",
+    "precio": 1.10,
+    "stock": 40,
+    "fechaActualizacion": "2026-11-10T20:00:00.000Z"
+  }
+]
