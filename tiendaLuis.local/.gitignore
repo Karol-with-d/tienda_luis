@@ -6,4 +6,6 @@ dist/
 
 # Archivos del sistema operativo o editores
 .DS_Store
-.vscode/
+.vscode/*.key
+*-key.pem
+node_modules/
