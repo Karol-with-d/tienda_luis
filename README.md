@@ -46,6 +46,18 @@ sudo systemctl start apache2
 
 Apache sirve `tiendaLuis.local/frontend/index.html` desde `/var/www/tienda_luis`. El virtual host `tiendaLuis.local/apache/tienda_luis-ssl.conf` redirige HTTP a HTTPS y reenvía `/api/` al backend.
 
+## Contenedor Docker
+
+El backend también puede ejecutarse en un contenedor Docker, que es la forma prevista para las fases siguientes:
+
+```bash
+cd tiendaLuis.local
+docker build -t tiendaluis-api .
+docker run -d --name tiendaluis-api -p 7000:7000 tiendaluis-api
+```
+
+Al publicar el puerto `7000`, el ProxyPass de Apache hacia `http://localhost:7000/` sigue funcionando igual: para Apache es indistinto si Express corre en la PC o dentro del contenedor.
+
 ## Acceso al sitio y a la API
 
 En el entorno configurado del equipo, abra:
