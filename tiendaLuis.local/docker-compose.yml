@@ -1,0 +1,68 @@
+services:
+  nodo1:
+    build: .
+    hostname: nodo1
+    restart: unless-stopped
+    expose: ["7000"]
+    networks:
+      clusternet:
+        ipv4_address: 172.20.0.11
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:7000/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  nodo2:
+    build: .
+    hostname: nodo2
+    restart: unless-stopped
+    expose: ["7000"]
+    networks:
+      clusternet:
+        ipv4_address: 172.20.0.12
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:7000/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  nodo3:
+    build: .
+    hostname: nodo3
+    restart: unless-stopped
+    expose: ["7000"]
+    networks:
+      clusternet:
+        ipv4_address: 172.20.0.13
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:7000/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  lb:
+    image: nginx:alpine
+    restart: unless-stopped
+    depends_on:
+      nodo1:
+        condition: service_healthy
+      nodo2:
+        condition: service_healthy
+      nodo3:
+        condition: service_healthy
+    ports: ["8088:80"]
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./frontend:/usr/share/nginx/html:ro
+    networks: [clusternet]
+
+networks:
+  clusternet:
+    name: clusternet
+    ipam:
+      config:
+        - subnet: 172.20.0.0/24

@@ -1,4 +1,6 @@
-# Tienda Luis — Fase 2
+# Tienda Luis - Apache (Fase 2) y cluster (Checkpoint 3)
+
+Este repositorio conserva la práctica anterior de Apache y prepara el mismo backend de inventario para el Checkpoint 3 de Gestión de Servidores Web. Apache/HTTPS es la Fase 2; no es el balanceador de esta entrega. Para el Checkpoint 3, siga `tiendaLuis.local/README.md` y use Docker Compose con Nginx.
 
 ## Objetivo
 
