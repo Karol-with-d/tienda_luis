@@ -68,7 +68,14 @@
 
 Guarde las capturas reales en `docs/capturas`. Abra `tiempos.csv` en Excel para comparar antes, durante y después. Si repite el ensayo para la evidencia final, borre primero el `tiempos.csv` de pruebas anteriores. El repositorio incluye el lugar para las capturas, pero no trae evidencias de ejecución Docker.
 
-## Dupla 3: Health Checks, Pruebas de Failover y Documentación
+Health Checks, Pruebas de Failover y Documentación
+
+### Implementación del Endpoint /health
+Para monitorear la disponibilidad real de cada instancia del backend dentro del clúster, se implementó un health check activo mediante la ruta GET /health en Express (src/index.ts):
+
+* *Operación normal (HTTP 200 OK):* Devuelve un estado 200 junto con un objeto JSON que indica "estado": "Health", la marca de tiempo (timeStamp) y el identificador del contenedor que atendió la petición (os.hostname()), permitiendo verificar el balanceo de carga entre nodos.
+* *Simulación de fallos (HTTP 503 Service Unavailable):* El endpoint soporta el parámetro opcional ?simular=falla. Al activarse, retorna un código 503 ("estado": "No Health") para comprobar cómo Docker detecta el fallo y cómo Nginx (proxy_next_upstream) redirige el tráfico hacia los nodos saludables sin afectar al usuario final.
+## Health Checks, Pruebas de Failover y Documentación
 
 ### Implementación del Endpoint /health
 Para monitorear la disponibilidad real de cada instancia del backend dentro del clúster, se implementó un health check activo mediante la ruta GET /health en Express (src/index.ts):
