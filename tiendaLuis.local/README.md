@@ -67,3 +67,44 @@
    Deben responder `200` y `nodo2` debe volver a aparecer en la rotación. Al terminar el ensayo, cierre el clúster con `docker compose down`.
 
 Guarde las capturas reales en `docs/capturas`. Abra `tiempos.csv` en Excel para comparar antes, durante y después. Si repite el ensayo para la evidencia final, borre primero el `tiempos.csv` de pruebas anteriores. El repositorio incluye el lugar para las capturas, pero no trae evidencias de ejecución Docker.
+
+## Dupla 3: Health Checks, Pruebas de Failover y Documentación
+
+### Implementación del Endpoint /health
+Para monitorear la disponibilidad real de cada instancia del backend dentro del clúster, se implementó un health check activo mediante la ruta GET /health en Express (src/index.ts):
+
+* *Operación normal (HTTP 200 OK):* Devuelve un estado 200 junto con un objeto JSON que indica "estado": "Health", la marca de tiempo (timeStamp) y el identificador del contenedor que atendió la petición (os.hostname()), permitiendo verificar el balanceo de carga entre nodos.
+* *Simulación de fallos (HTTP 503 Service Unavailable):* El endpoint soporta el parámetro opcional ?simular=falla. Al activarse, retorna un código 503 ("estado": "No Health") para comprobar cómo Docker detecta el fallo y cómo Nginx (proxy_next_upstream) redirige el tráfico hacia los nodos saludables sin afectar al usuario final.
+
+
+### Evidencias (Capturas de Pantalla)
+
+*1. Nodos activos y saludables (docker compose ps)*
+![Cluster healthy](docs/capturas/Cluster_healthy.jpg)
+
+*2. Balanceo de carga y respuestas HTTP 200 en /health*
+![Balanceo](docs/capturas/Balanceo.jpg)
+
+*3. Prueba de Failover (nodo2 detenido y tráfico redirigido a nodo1 y nodo3)*
+![Failover](docs/capturas/Failover.jpg)
+
+*4. Recuperación del nodo (nodo2 reactivado y saludable)*
+![Recuperación](docs/capturas/Recuperación.jpg)
+
+```typescript
+app.get("/health", (req: Request, res: Response) => {
+  if (req.query.simular === "falla") {
+    return res.status(503).json({
+      estado: "No Health",
+      nodo: os.hostname(),
+      timeStamp: new Date().toISOString(),
+      mensaje: "Falla simulada en servidor Tienda Luis"
+    });
+  }
+
+  res.status(200).json({
+    estado: "Health",
+    nodo: os.hostname(),
+    timeStamp: new Date().toISOString()
+  });
+});
