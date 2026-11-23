@@ -17,7 +17,7 @@ curl -i http://localhost:7000/health
 
 
 
-## Monitoreo de Salud, Pruebas de Failover y Documentación (Dupla 3)
+## Monitoreo de Salud y Pruebas de Failover
 
 Se implementó el monitoreo activo de disponibilidad del clúster mediante el endpoint `GET /health` en Express (`src/index.ts`), retornando `HTTP 200 OK` junto con el identificador del nodo (`os.hostname()`) y la marca de tiempo (`timeStamp`) en operación normal, o `HTTP 503 Service Unavailable` mediante el parámetro `?simular=falla` para validar la detección automática de fallos y la redirección de tráfico en Nginx (`proxy_next_upstream`).
 
