@@ -10,8 +10,20 @@ curl -i http://localhost:7000/health
 ![Validación Endpoint Health](docs/capturas/validacion_endpoint.jpeg)
 
 
-##(espacio para la tupla 2)
+## Infraestructura de clúster y balanceo de carga
+Se implementó la orquestacion de contenedores mediante **docker compose** (`docker-compose yml`) para desplegar 3 réplicas independientes del backend (`nodo1`, `nodo2` y `nodo3`), superando el mínimo de 2 nodos requeridos. 
 
+Asimismo, se configuró **Nginx** (`lb`) como proxy inverso y balanceador de carga frontal mediante un bloque `upstream`, exponiendo únicamente el puerto 8088 hacia el host y distribuyendo las peticiones entrantes de forma equitativa bajo el algoritmo **Round Robin**.
+
+## Evidencias de implementación
+
+1. **Despliegue de nodos y exposición exclusiva del balanceador:**
+Se ejecutó `docker compose up -d` y `docker compose ps`, verificando que `nodo1`, `nodo2` y `nodo3` alcanzaron el estado `healthy` en el puerto interno `7000/tsp`, mientras que únicamente `lb` publicó el puerto 8088
+
+
+
+2. **Segmentación en red privada interna (`clusternet`):**
+Se inspeccionó la red puente con `docker network inspect clusternet` confirmando el direccionamiento privado asignado al balanceador (`172.20.0.2/24`) y a los tres nodos (`172.20.0.11/24`, `172.20.0.12/24` y `172.20.0.13/24`).
 
 
 
