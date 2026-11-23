@@ -1,5 +1,3 @@
-> **Checkpoint 3 (Clase 36):** esta guía corresponde al clúster de tres nodos y Nginx. La configuración Apache/HTTPS de la raíz del repositorio pertenece a la Fase 2 y no satisface el requisito del balanceador de esta entrega.
-
 ## Arquitectura preparada
 
 `docker-compose.yml` construye tres copias de la API real de inventario (`nodo1`, `nodo2`, `nodo3`) y las conecta a la red privada `clusternet` (`172.20.0.0/24`, con IP fija `.11`, `.12` y `.13` como en la Clase 33). Nginx (servicio `lb`) sirve la página real `frontend/index.html` y distribuye las rutas `/api/` y `/health` entre las tres copias. Es el único servicio que publica un puerto del equipo: `8088`. Use `/health` para ver qué nodo respondió. Compose comprueba la salud de cada API con `wget`; Nginx reintenta una petición si una conexión falla y deja temporalmente de elegir ese nodo.
@@ -75,43 +73,3 @@ Para monitorear la disponibilidad real de cada instancia del backend dentro del 
 
 * *Operación normal (HTTP 200 OK):* Devuelve un estado 200 junto con un objeto JSON que indica "estado": "Health", la marca de tiempo (timeStamp) y el identificador del contenedor que atendió la petición (os.hostname()), permitiendo verificar el balanceo de carga entre nodos.
 * *Simulación de fallos (HTTP 503 Service Unavailable):* El endpoint soporta el parámetro opcional ?simular=falla. Al activarse, retorna un código 503 ("estado": "No Health") para comprobar cómo Docker detecta el fallo y cómo Nginx (proxy_next_upstream) redirige el tráfico hacia los nodos saludables sin afectar al usuario final.
-## Health Checks, Pruebas de Failover y Documentación
-
-### Implementación del Endpoint /health
-Para monitorear la disponibilidad real de cada instancia del backend dentro del clúster, se implementó un health check activo mediante la ruta GET /health en Express (src/index.ts):
-
-* *Operación normal (HTTP 200 OK):* Devuelve un estado 200 junto con un objeto JSON que indica "estado": "Health", la marca de tiempo (timeStamp) y el identificador del contenedor que atendió la petición (os.hostname()), permitiendo verificar el balanceo de carga entre nodos.
-* *Simulación de fallos (HTTP 503 Service Unavailable):* El endpoint soporta el parámetro opcional ?simular=falla. Al activarse, retorna un código 503 ("estado": "No Health") para comprobar cómo Docker detecta el fallo y cómo Nginx (proxy_next_upstream) redirige el tráfico hacia los nodos saludables sin afectar al usuario final.
-
-
-### Evidencias (Capturas de Pantalla)
-
-*1. Nodos activos y saludables (docker compose ps)*
-![Cluster healthy](docs/capturas/Cluster_healthy.jpg)
-
-*2. Balanceo de carga y respuestas HTTP 200 en /health*
-![Balanceo](docs/capturas/Balanceo.jpg)
-
-*3. Prueba de Failover (nodo2 detenido y tráfico redirigido a nodo1 y nodo3)*
-![Failover](docs/capturas/Failover.jpg)
-
-*4. Recuperación del nodo (nodo2 reactivado y saludable)*
-![Recuperación](docs/capturas/Recuperación.jpg)
-
-```typescript
-app.get("/health", (req: Request, res: Response) => {
-  if (req.query.simular === "falla") {
-    return res.status(503).json({
-      estado: "No Health",
-      nodo: os.hostname(),
-      timeStamp: new Date().toISOString(),
-      mensaje: "Falla simulada en servidor Tienda Luis"
-    });
-  }
-
-  res.status(200).json({
-    estado: "Health",
-    nodo: os.hostname(),
-    timeStamp: new Date().toISOString()
-  });
-});
