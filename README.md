@@ -1,4 +1,4 @@
-# Tienda Luis — Inventario en Alta Disponibilidad
+# Tienda Luis
 
 Backend de inventario (Express + TypeScript) servido a través de un **clúster de
 3 nodos** detrás de un **balanceador Nginx con HTTPS**, tolerancia a fallos y
