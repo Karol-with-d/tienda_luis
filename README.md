@@ -1,78 +1,146 @@
-# Tienda Luis - Apache (Fase 2) y cluster (Checkpoint 3)
+# Tienda Luis — Inventario en Alta Disponibilidad
 
-Este repositorio conserva la práctica anterior de Apache y prepara el mismo backend de inventario para el Checkpoint 3 de Gestión de Servidores Web. Apache/HTTPS es la Fase 2; no es el balanceador de esta entrega. Para el Checkpoint 3, siga `tiendaLuis.local/README.md` y use Docker Compose con Nginx.
+Backend de inventario (Express + TypeScript) servido a través de un **clúster de
+3 nodos** detrás de un **balanceador Nginx con HTTPS**, tolerancia a fallos y
+monitoreo de salud. Checkpoint 3 — Gestión de Servidores Web.
 
-## Objetivo
+## Estructura del repositorio
 
-Presentar la conexión del sitio de Tienda Luis con la API de inventario mediante Apache, ProxyPass y HTTPS.
+```text
+tienda_luis/
+├── README.md                  <- este archivo (guía de ejecución)
+├── image.png / image-1.png    <- evidencias HTTPS de la Fase 2
+└── tiendaLuis.local/
+    ├── docker-compose.yml     <- orquestación: 3 nodos + balanceador lb
+    ├── Dockerfile             <- imagen del backend (node:20-alpine)
+    ├── nginx/nginx.conf       <- upstream + HTTPS + redirect + proxy
+    ├── apache/                <- certificado SSL y conf de Apache (Fase 2)
+    ├── frontend/index.html    <- sitio estático "Tienda Luis"
+    ├── src/                   <- API Express en TypeScript (puerto 7000)
+    ├── data/productos.json    <- inventario compartido entre nodos
+    ├── scripts/medir.ps1      <- script de pruebas de balanceo
+    └── docs/capturas/         <- evidencias del clúster
+```
 
 ## Arquitectura
 
 ```text
-PERSONAL DE TIENDA LUIS
-          │
-          │ HTTPS
-          ▼
-┌─────────────────────────────┐
-│ PC 2: APACHE                │
-│ Sirve el sitio HTML/CSS     │
-└──────────────┬──────────────┘
-               │ ProxyPass /api/
-               ▼
-┌─────────────────────────────┐
-│ EXPRESS — API (puerto 7000) │
-│ En la misma PC que Apache   │
-└──────────────┬──────────────┘
-               │ Lee y guarda
-               ▼
-         productos.json
+Usuario (navegador / curl)
+   │
+   │   https://localhost        <- entrada HTTPS (puerto 443)
+   │   http://localhost:8088    <- redirige automáticamente a HTTPS
+   ▼
+[ lb: Nginx ]                    único servicio publicado hacia afuera
+   │   red privada clusternet (172.30.0.0/24)
+   │
+   ├──> nodo1  172.30.0.11:7000 ┐
+   ├──> nodo2  172.30.0.12:7000 ├── carpeta compartida ./data (inventario)
+   └──> nodo3  172.30.0.13:7000 ┘
 ```
 
-Apache sirve el HTML estático y reenvía las solicitudes de la API a Express. En la configuración actual, Apache y Express se ejecutan en la misma computadora porque el proxy se conecta a `localhost:7000`. Los nodos adicionales y el balanceador pertenecen a fases posteriores.
+## Guía de ejecución (paso a paso)
 
-## Ejecución
+### Requisitos previos
 
-En la computadora donde están configurados Apache y el backend, abra PowerShell en la raíz del repositorio y ejecute:
+- **Docker Desktop** (o Docker Engine + Compose en Linux)
+- **Git**
+- **mkcert** — para generar el certificado HTTPS
+
+> **Importante:** la llave privada del certificado **no está en el repositorio**
+> por seguridad (`.gitignore` excluye `*-key.pem`). Sin ella el balanceador no
+> arranca; el Paso 1 la genera en menos de un minuto.
+
+### Paso 0 — Clonar y ubicarse
 
 ```powershell
-cd .\tiendaLuis.local
-npm ci
-npm run dev
+git clone https://github.com/Karol-with-d/tienda_luis.git
+cd tienda_luis/tiendaLuis.local
 ```
 
-Mantenga abierta esa ventana para que Express siga ejecutándose en el puerto `7000`. Apache es un servicio aparte; en la PC que aloja el sitio, se inicia con:
+### Paso 1 — Generar el certificado SSL
 
-```bash
-sudo systemctl start apache2
+Instale mkcert (`winget install FiloSottile.mkcert` en Windows, `brew install
+mkcert` en macOS o `sudo apt install mkcert` en Ubuntu) y desde la carpeta
+`tiendaLuis.local` ejecute:
+
+```powershell
+mkcert -install
+mkcert -key-file apache/tienda-luis.local+3-key.pem -cert-file apache/tienda-luis.local.pem tienda-luis.local localhost 127.0.0.1 ::1
 ```
 
-Apache sirve `tiendaLuis.local/frontend/index.html` desde `/var/www/tienda_luis`. El virtual host `tiendaLuis.local/apache/tienda_luis-ssl.conf` redirige HTTP a HTTPS y reenvía `/api/` al backend.
+Esto crea la llave privada en `apache/` (queda fuera de git) e instala la CA en
+el equipo para que el navegador muestre el candado **sin advertencias**.
 
-## Contenedor Docker
+### Paso 2 — Construir la imagen del backend
 
-El backend también puede ejecutarse en un contenedor Docker, que es la forma prevista para las fases siguientes:
-
-```bash
-cd tiendaLuis.local
+```powershell
 docker build -t tiendaluis-api .
-docker run -d --name tiendaluis-api -p 7000:7000 tiendaluis-api
 ```
 
-Al publicar el puerto `7000`, el ProxyPass de Apache hacia `http://localhost:7000/` sigue funcionando igual: para Apache es indistinto si Express corre en la PC o dentro del contenedor.
+### Paso 3 — Levantar el clúster
 
-## Acceso al sitio y a la API
+```powershell
+docker compose up -d
+```
 
-En el entorno configurado del equipo, abra:
+### Paso 4 — Verificar
 
-- Sitio: `http://tienda-luis.local/` (Apache redirige a `https://tienda-luis.local/`).
-- API a través de Apache: `https://tienda-luis.local/api/productos`.
-- API directa de Express: `http://localhost:7000/productos`.
+```powershell
+docker compose exec lb nginx -t     # "syntax is ok / test is successful"
+docker compose ps                    # lb Up; nodo1, nodo2, nodo3 Up (healthy)
+```
 
-`npm run dev` inicia la API, no el HTML. Si abre `http://localhost:7000/`, Express responde `Cannot GET /` porque no hay una ruta raíz; para ver el HTML, utilice `tienda-luis.local`.
+### Paso 5 — Acceder
 
-## Seguridad y evidencias HTTPS
+| URL | Resultado esperado |
+|---|---|
+| `http://localhost:8088` | **301 →** `https://localhost` (redirección automática) |
+| `https://localhost` | Sitio "Tienda Luis" con **candado, sin advertencias** |
+| `https://localhost/api/productos` | JSON del inventario vía balanceador |
+| `https://localhost/health` | Repita la petición: rota `nodo1 → nodo2 → nodo3` |
 
-Apache usa el certificado público `tiendaLuis.local/apache/tienda-luis.local.pem`. La llave privada se mantiene fuera del repositorio y está excluida mediante `.gitignore`. En el entorno del equipo, el sitio se muestra en HTTPS con el candado y sin advertencias.
+Round Robin desde PowerShell:
 
-![alt text](image.png)
-![alt text](image-1.png)
+```powershell
+1..6 | ForEach-Object { (Invoke-RestMethod https://localhost/health).nodo }
+```
+
+O con el script incluido (10 peticiones con nodo, estado y tiempo):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\medir.ps1 -Fase antes
+```
+
+### Paso 6 — Prueba de failover (alta disponibilidad)
+
+```powershell
+docker compose stop nodo2
+powershell -ExecutionPolicy Bypass -File .\scripts\medir.ps1 -Fase durante
+# el servicio sigue respondiendo 200 con nodo1 y nodo3
+
+docker compose start nodo2
+powershell -ExecutionPolicy Bypass -File .\scripts\medir.ps1 -Fase despues
+# nodo2 vuelve a la rotación
+```
+
+### Apagar
+
+```powershell
+docker compose down       # el inventario queda en ./data
+```
+
+### Problemas comunes
+
+| Síntoma | Causa y solución |
+|---|---|
+| `lb` en `Exited` / `cannot load certificate key` | Falta la llave privada → repita el **Paso 1** |
+| Advertencia de certificado en el navegador | No corrió `mkcert -install` (instala la CA en el equipo) |
+| `not a directory` al levantar | Faltaba `nginx/nginx.conf` y Docker creó una carpeta → `docker compose down`, borre `nginx/nginx.conf` (carpeta) y cree el archivo |
+| Puerto `8088` o `443` ocupado | Cambie el lado izquierdo del mapeo en `docker-compose.yml` |
+
+Documentación por fase:
+
+- **[tiendaLuis.local/fase3.md](tiendaLuis.local/fase3.md)** — clúster de 3
+  nodos, balanceador Nginx, HTTPS, evidencias y prueba de failover con capturas.
+- **[tiendaLuis.local/fase2.md](tiendaLuis.local/fase2.md)** — Fase 2
+  (histórico): Apache + ProxyPass + HTTPS y evidencias del candado.

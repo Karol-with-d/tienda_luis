@@ -40,10 +40,13 @@ services:
 
   lb:
     image: nginx:alpine
-    ports: ["8080:80"]                     # único puerto abierto hacia afuera
+    ports:
+      - "8088:80"                          # HTTP -> redirige a HTTPS
+      - "443:443"                          # HTTPS (unico puerto de entrada)
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
       - ./frontend:/usr/share/nginx/html:ro
+      - ./apache:/etc/nginx/ssl:ro         # certificado + llave (mkcert)
     networks: ["clusternet"]
     depends_on: [nodo1, nodo2, nodo3]
 
