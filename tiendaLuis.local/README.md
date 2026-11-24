@@ -19,14 +19,18 @@ Asimismo, se configuró **Nginx** (`lb`) como proxy inverso y balanceador de car
 
 1. **Despliegue de nodos y exposición exclusiva del balanceador:**
 Se ejecutó `docker compose up -d` y `docker compose ps`, verificando que `nodo1`, `nodo2` y `nodo3` alcanzaron el estado `healthy` en el puerto interno `7000/tsp`, mientras que únicamente `lb` publicó el puerto 8088
-
+![Despliegue nodos](docs/capturas/Despliegue_de_nodos1.jpeg)
 
 
 2. **Segmentación en red privada interna (`clusternet`):**
 Se inspeccionó la red puente con `docker network inspect clusternet` confirmando el direccionamiento privado asignado al balanceador (`172.20.0.2/24`) y a los tres nodos (`172.20.0.11/24`, `172.20.0.12/24` y `172.20.0.13/24`).
+![Red privada parte1](docs/capturas/red-privada-clusternet.jpeg)
 
+![Red privada2](docs/capturas/red-privada-clusternet2.jpeg)
 
-
+3. **Distribución equitativa de trafico (Round Robin)**
+Se realizaron 10 peticiones HTTP a `http://localhost:8088/health` mediante el script `medir.ps1`, comprobando respuestas `200 OK` alternadas de manera equitativa entre `nodo1`, `node2`, `nodo3`
+![Balanceo antes](docs/capturas/balanceo-antes.jpeg)
 
 
 ## Monitoreo de Salud y Pruebas de Failover
